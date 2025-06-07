@@ -7,21 +7,25 @@ class AuthProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   UserData? _currentUser;
+  String? _token;
 
   bool get isAuthenticated => _isAuthenticated;
   bool get isLoading => _isLoading;
   String? get error => _error;
   UserData? get currentUser => _currentUser;
+  String? get token => _token;
 
   Future<void> checkAuthStatus() async {
     _setLoading(true);
     try {
       final token = await ApiService.getAuthToken();
       _isAuthenticated = token != null;
+      _token = token;
       _error = null;
     } catch (e) {
       _error = e.toString();
       _isAuthenticated = false;
+      _token = null;
     }
     _setLoading(false);
   }
@@ -31,12 +35,19 @@ class AuthProvider with ChangeNotifier {
     try {
       await ApiService.setAuthToken(token);
       _isAuthenticated = true;
+      _token = token;
       _error = null;
     } catch (e) {
       _error = e.toString();
       _isAuthenticated = false;
+      _token = null;
     }
     _setLoading(false);
+  }
+
+  // Backwards compatibility for older tests
+  void setToken(String token) {
+    setAuthToken(token);
   }
 
   Future<void> logout() async {
@@ -45,6 +56,7 @@ class AuthProvider with ChangeNotifier {
       await ApiService.clearAuthToken();
       _isAuthenticated = false;
       _currentUser = null;
+      _token = null;
       _error = null;
     } catch (e) {
       _error = e.toString();
