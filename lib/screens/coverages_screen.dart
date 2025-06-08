@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math; // For min/max
+import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../models/api_response.dart';
+import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 
 class CoveragesScreen extends StatefulWidget {
@@ -92,10 +94,12 @@ class _CoveragesScreenState extends State<CoveragesScreen> with TickerProviderSt
           _error = null;
         });
       }
-    }
-
-    try {
-      final coverages = await ApiService.getCoverages();
+    }    try {
+      // Get the current user ID from AuthProvider
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final userId = authProvider.currentUser?.id ?? '';
+      
+      final coverages = await ApiService.getCoverages(userId);
       if (mounted) {
         setState(() {
           _coverages = coverages;

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Import for SystemNavigator
 import 'package:webview_flutter/webview_flutter.dart';
 import '../providers/auth_provider.dart';
-import '../services/api_service.dart'; // Add this import
 import 'package:provider/provider.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -142,7 +141,6 @@ Page resource error:
       }
     }
   }
-
   Future<void> _handleTokenFound(String token) async {
     if (!mounted) return;
     
@@ -161,8 +159,23 @@ Page resource error:
     }
 
     debugPrint("Auth Token Received via Channel: $cleanedToken");
+
+    // Extract userId from token structure: userId|userType|token
+    String? userId;
+    try {
+      final tokenParts = cleanedToken.split('|');
+      if (tokenParts.length >= 3) {
+        userId = tokenParts[0]; // First part should be the user ID
+        debugPrint("Extracted userId from token: '$userId'");
+      } else {
+        debugPrint("Token doesn't match expected format (userId|userType|token), using token as-is");
+      }
+    } catch (e) {
+      debugPrint("Error extracting userId from token: $e");
+    }
+
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    await authProvider.setAuthToken(cleanedToken);
+    await authProvider.setAuthToken(cleanedToken, userId: userId);
 
     if (mounted && authProvider.isAuthenticated) {
       Navigator.of(context).pushReplacementNamed('/home');

@@ -20,7 +20,6 @@ class AuthProvider with ChangeNotifier {
     _currentUser = userData;
     notifyListeners();
   }
-
   Future<void> checkAuthStatus() async {
     debugPrint("AuthProvider: checkAuthStatus called");
     _error = null; 
@@ -30,6 +29,22 @@ class AuthProvider with ChangeNotifier {
         _isAuthenticated = true;
         _token = tokenValue;
         debugPrint("AuthProvider: Token found from storage: $tokenValue.");
+        
+        // Extract userId from token structure: userId|userType|token
+        String? userId;
+        try {
+          final tokenParts = tokenValue.split('|');
+          if (tokenParts.length >= 3) {
+            userId = tokenParts[0]; // First part should be the user ID
+            debugPrint("AuthProvider: Extracted userId from stored token: '$userId'");
+            // Load user data with the extracted userId
+            await loadCurrentUser(userId);
+          } else {
+            debugPrint("AuthProvider: Token doesn't match expected format (userId|userType|token)");
+          }
+        } catch (e) {
+          debugPrint("AuthProvider: Error extracting userId from stored token: $e");
+        }
       } else {
         _isAuthenticated = false;
         _token = null;
