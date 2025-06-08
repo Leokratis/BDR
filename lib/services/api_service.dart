@@ -6,6 +6,7 @@ import '../models/api_response.dart';
 import 'package:flutter/foundation.dart'; // Import for debugPrint
 
 class ApiService {
+
   // Updated base URL based on the official API documentation
   static const String baseUrl = 'https://service.blooddonorregistry.gr/v2';
   static const String _tokenKey = 'x_auth_token';
@@ -206,8 +207,10 @@ class ApiService {
     if (_isMockMode) {
       debugPrint('ApiService: In mock mode, returning MOCK CaptchaData.');
       return Future.delayed(const Duration(milliseconds: 300), () => _mockCaptchaData);
-    }    try {      final response = await http.get(
-        Uri.parse('https://service.blooddonorregistry.gr/v2/captcha'),
+    }
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/captcha'),
         headers: await _getHeaders(requireAuth: false, language: 'en'),
       );
 
@@ -217,7 +220,7 @@ class ApiService {
     }
   }
 
-  // GET /v2/user/{id} - Get user info
+  // GET /blooddonor/{id} - Get user info
   static Future<UserData> getUser(String userId, {String? language, String? ifModifiedSince}) async {
     await _checkMockMode();
     debugPrint("ApiService: getUser called with userId: '$userId'. Current mock mode: $_isMockMode");
@@ -424,8 +427,10 @@ class ApiService {
       debugPrint('ApiService: MOCK sendIssue called with mock token. Data: ${issue.toJson()}');
       // Simulate a successful API call for contact form in mock mode
       return Future.delayed(const Duration(milliseconds: 300)); 
-    }    try {      final response = await http.post(
-        Uri.parse('https://service.blooddonorregistry.gr/v2/contact'),
+    }
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/contact'),
         headers: await _getHeaders(requireAuth: false, language: 'en'),
         body: json.encode(issue.toJson()),
       );if (response.statusCode >= 200 && response.statusCode < 300) {

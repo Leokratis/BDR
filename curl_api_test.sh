@@ -1,6 +1,10 @@
 #!/bin/bash
 # Simple script to test the Blood Donation Registry API using curl.
 
+BASE_URL="https://service.bdr.gr/blood-donor-registry-web-public/rest"
+TOKEN="$1"
+USER_ID="$2"
+
 BASE_URL="https://service.blooddonorregistry.gr/v2"
 TOKEN="$1"
 
@@ -15,6 +19,9 @@ echo "Testing captcha endpoint..."
 curl -s "$BASE_URL/captcha" | head -c 200 && echo -e "\n"
 
 echo "Testing donations endpoint..."
+curl -s -H "X-Auth-Token: $TOKEN" \
+  "$BASE_URL/blooddonor/$USER_ID/donation/history" | head -c 200 && echo -e "\n"
+
 curl -s -H "X-Auth-Token: $TOKEN" "$BASE_URL/donations" | head -c 200 && echo -e "\n"
 
 echo "Testing coverages endpoint..."

@@ -36,7 +36,7 @@ void main() async {
   print('Testing captcha with GET request...');
   try {
     final response = await http.get(
-      Uri.parse('https://service.blooddonorregistry.gr/v2/captcha'),
+      Uri.parse('https://service.bdr.gr/blood-donor-registry-web-public/rest/captcha'),
       headers: {
         'Accept': 'application/json',
         'Accept-Language': 'en',

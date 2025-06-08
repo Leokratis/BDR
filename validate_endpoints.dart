@@ -1,6 +1,7 @@
 void main() {
   // Test that our current API service configuration produces the correct URLs
-  const baseUrl = 'https://service.blooddonorregistry.gr/v2';
+  const baseUrl =
+      'https://service.bdr.gr/blood-donor-registry-web-public/rest';
   
   print('=== API Endpoint URL Validation ===\n');
   
