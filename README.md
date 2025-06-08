@@ -152,8 +152,8 @@ Once authenticated:
 The app demonstrates how to use the Blood Donation Registry API:
 
 ```bash
-# Example API request (as shown in the documentation)
-curl -v -X GET -H "X-Auth-Token: TOKEN_HERE" "https://service.blooddonorregistry.gr/v2/donations"
+# Example API request (legacy endpoint)
+curl -v -X GET -H "X-Auth-Token: TOKEN_HERE" "https://service.bdr.gr/blood-donor-registry-web-public/rest/blooddonor/123/donation/history"
 ```
 
 The app handles all API requests automatically with proper authentication headers.
