@@ -5,15 +5,16 @@ Future<void> main() async {
   print('Testing API endpoint structures...\n');
   
   // Different base URL patterns to test
+  // Official base URL
   final baseUrls = [
-    'https://service.bdr.gr/blood-donor-registry-web-public/rest',
+    'https://service.blooddonorregistry.gr/v2',
   ];
   
   // Different endpoint patterns to test
   final endpointPatterns = [
-    '/blooddonor/123/donation/history',
-    '/blooddonor/123/coverageDonation/history',
-    '/blooddonor/123',
+    '/donations',
+    '/coverages',
+    '/user/123',
     '/captcha',
   ];
   

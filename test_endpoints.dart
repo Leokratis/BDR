@@ -3,10 +3,10 @@ import 'package:http/http.dart' as http;
 void main() async {
   // Test the correct API endpoints according to documentation
   final testEndpoints = [
-    'https://service.bdr.gr/blood-donor-registry-web-public/rest/captcha',
-    'https://service.bdr.gr/blood-donor-registry-web-public/rest/blooddonor/123/donation/history',
-    'https://service.bdr.gr/blood-donor-registry-web-public/rest/blooddonor/123/coverageDonation/history',
-    'https://service.bdr.gr/blood-donor-registry-web-public/rest/contact',
+    'https://service.blooddonorregistry.gr/v2/captcha',
+    'https://service.blooddonorregistry.gr/v2/donations',
+    'https://service.blooddonorregistry.gr/v2/coverages',
+    'https://service.blooddonorregistry.gr/v2/contact',
   ];
 
   print('Testing API endpoints according to official documentation...\n');

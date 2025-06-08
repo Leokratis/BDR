@@ -6,9 +6,9 @@ import '../models/api_response.dart';
 import 'package:flutter/foundation.dart'; // Import for debugPrint
 
 class ApiService {
-  // Base URL for the legacy API as documented
-  static const String
-      baseUrl = 'https://service.bdr.gr/blood-donor-registry-web-public/rest';
+
+  // Updated base URL based on the official API documentation
+  static const String baseUrl = 'https://service.blooddonorregistry.gr/v2';
   static const String _tokenKey = 'x_auth_token';
   static const FlutterSecureStorage _storage = FlutterSecureStorage();
 
@@ -251,7 +251,7 @@ class ApiService {
       final headers = await _getHeaders(language: language ?? 'en');
       if (ifModifiedSince != null) {
         headers['If-Modified-Since'] = ifModifiedSince;
-      }      final uri = Uri.parse('$baseUrl/blooddonor/$userId');
+      }      final uri = Uri.parse('$baseUrl/user/$userId');
       debugPrint("ApiService: getUser - About to make HTTP GET request to: $uri");
       debugPrint("ApiService: getUser - Headers: $headers");
       
@@ -266,7 +266,7 @@ class ApiService {
     }
   }
 
-  // GET /blooddonor/{userId}/donation/history - Get donations
+  // GET /donations - Get donations for the authenticated user
   static Future<List<Donation>> getDonations(String userId, {String? language, String? ifModifiedSince}) async {
     await _checkMockMode();
     debugPrint("ApiService: getDonations called with userId: '$userId'. Current mock mode: $_isMockMode");
@@ -275,8 +275,9 @@ class ApiService {
       return Future.delayed(const Duration(milliseconds: 300), () => _mockDonations);
     }
 
+    // New API no longer requires the userId in the path. Keep parameter for backward compatibility.
     if (userId.isEmpty) {
-      throw Exception('User ID is required to fetch donations');
+      debugPrint("ApiService: getDonations called without userId - continuing as it's optional in the new API");
     }
     // Test network connectivity first
     debugPrint("ApiService: getDonations - Testing network connectivity...");
@@ -288,8 +289,7 @@ class ApiService {
     try {      final headers = await _getHeaders(language: language ?? 'en');
       if (ifModifiedSince != null) {
         headers['If-Modified-Since'] = ifModifiedSince;
-      }      final uri =
-          Uri.parse('$baseUrl/blooddonor/$userId/donation/history');
+      }      final uri = Uri.parse('$baseUrl/donations');
       debugPrint("ApiService: getDonations - About to make HTTP GET request to: $uri");
       debugPrint("ApiService: getDonations - Headers: $headers");
       
@@ -351,7 +351,7 @@ class ApiService {
     }
   }
 
-  // GET /blooddonor/{userId}/coverageDonation/history - Get coverages
+  // GET /coverages - Get coverages for the authenticated user
   static Future<List<Coverage>> getCoverages(String userId, {String? language, String? ifModifiedSince}) async {
     await _checkMockMode();
     debugPrint("ApiService: getCoverages called with userId: '$userId'. Current mock mode: $_isMockMode");
@@ -360,16 +360,16 @@ class ApiService {
       return Future.delayed(const Duration(milliseconds: 300), () => _mockCoverages);
     }
 
+    // New API does not require the userId in the path
     if (userId.isEmpty) {
-      throw Exception('User ID is required to fetch coverages');
+      debugPrint("ApiService: getCoverages called without userId - continuing as it's optional in the new API");
     }
 
     try {
       final headers = await _getHeaders(language: language ?? 'en');
       if (ifModifiedSince != null) {
         headers['If-Modified-Since'] = ifModifiedSince;
-      }      final uri =
-          Uri.parse('$baseUrl/blooddonor/$userId/coverageDonation/history');
+      }      final uri = Uri.parse('$baseUrl/coverages');
       debugPrint("ApiService: getCoverages - About to make HTTP GET request to: $uri");
       debugPrint("ApiService: getCoverages - Headers: $headers");
       
