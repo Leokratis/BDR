@@ -3,15 +3,10 @@ import 'package:http/http.dart' as http;
 void main() async {
   print('Testing alternative API base URLs...\n');
   
-  // Test different possible API base structures
+  // Test the legacy API base URL and a couple of variations
   final testUrls = [
     'https://service.bdr.gr/blood-donor-registry-web-public/rest',
-    'https://service.blooddonorregistry.gr/blood-donor-registry-web-public/rest', 
-    'https://service.blooddonorregistry.gr/rest',
-    'https://service.blooddonorregistry.gr/api',
-    'https://service.blooddonorregistry.gr/v2/v2/donations', // Current failing
-    'https://service.blooddonorregistry.gr/v2/donations',
-    'https://service.blooddonorregistry.gr/donations',
+    'https://service.bdr.gr/blood-donor-registry-web-public/rest/blooddonor',
   ];
   
   for (final url in testUrls) {

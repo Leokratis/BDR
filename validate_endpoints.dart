@@ -1,16 +1,17 @@
 void main() {
   // Test that our current API service configuration produces the correct URLs
-  const baseUrl = 'https://service.blooddonorregistry.gr/v2';
+  const baseUrl =
+      'https://service.bdr.gr/blood-donor-registry-web-public/rest';
   
   print('=== API Endpoint URL Validation ===\n');
   
   // Test all endpoint URLs
   final endpoints = {
-    'Donations': '$baseUrl/v2/donations',
-    'User (ID: 123)': '$baseUrl/v2/user/123', 
-    'Coverages': '$baseUrl/v2/coverages',
-    'Captcha': 'https://service.blooddonorregistry.gr/v2/captcha',
-    'Contact': 'https://service.blooddonorregistry.gr/v2/contact',
+    'Donations': '$baseUrl/blooddonor/123/donation/history',
+    'User (ID: 123)': '$baseUrl/blooddonor/123',
+    'Coverages': '$baseUrl/blooddonor/123/coverageDonation/history',
+    'Captcha': '$baseUrl/captcha',
+    'Contact': '$baseUrl/contact',
   };
   
   print('Current API Service URLs:');
@@ -19,20 +20,29 @@ void main() {
   });
   
   print('\n=== Expected URLs (from API docs) ===');
-  print('  Donations: https://service.blooddonorregistry.gr/v2/v2/donations');
-  print('  User: https://service.blooddonorregistry.gr/v2/v2/user/{id}');
-  print('  Coverages: https://service.blooddonorregistry.gr/v2/v2/coverages');
-  print('  Captcha: https://service.blooddonorregistry.gr/v2/captcha');
-  print('  Contact: https://service.blooddonorregistry.gr/v2/contact');
+  print(
+      '  Donations: https://service.bdr.gr/blood-donor-registry-web-public/rest/blooddonor/{id}/donation/history');
+  print('  User: https://service.bdr.gr/blood-donor-registry-web-public/rest/blooddonor/{id}');
+  print(
+      '  Coverages: https://service.bdr.gr/blood-donor-registry-web-public/rest/blooddonor/{id}/coverageDonation/history');
+  print('  Captcha: https://service.bdr.gr/blood-donor-registry-web-public/rest/captcha');
+  print('  Contact: https://service.bdr.gr/blood-donor-registry-web-public/rest/contact');
   
   print('\n=== Validation Results ===');
   
   // Check if URLs match expected format
-  bool donationsMatch = endpoints['Donations'] == 'https://service.blooddonorregistry.gr/v2/v2/donations';
-  bool userMatch = endpoints['User (ID: 123)'] == 'https://service.blooddonorregistry.gr/v2/v2/user/123';
-  bool coveragesMatch = endpoints['Coverages'] == 'https://service.blooddonorregistry.gr/v2/v2/coverages';
-  bool captchaMatch = endpoints['Captcha'] == 'https://service.blooddonorregistry.gr/v2/captcha';
-  bool contactMatch = endpoints['Contact'] == 'https://service.blooddonorregistry.gr/v2/contact';
+  bool donationsMatch =
+      endpoints['Donations'] ==
+          'https://service.bdr.gr/blood-donor-registry-web-public/rest/blooddonor/123/donation/history';
+  bool userMatch = endpoints['User (ID: 123)'] ==
+      'https://service.bdr.gr/blood-donor-registry-web-public/rest/blooddonor/123';
+  bool coveragesMatch =
+      endpoints['Coverages'] ==
+          'https://service.bdr.gr/blood-donor-registry-web-public/rest/blooddonor/123/coverageDonation/history';
+  bool captchaMatch = endpoints['Captcha'] ==
+      'https://service.bdr.gr/blood-donor-registry-web-public/rest/captcha';
+  bool contactMatch = endpoints['Contact'] ==
+      'https://service.bdr.gr/blood-donor-registry-web-public/rest/contact';
   
   print('  Donations URL: ${donationsMatch ? "✅ CORRECT" : "❌ INCORRECT"}');
   print('  User URL: ${userMatch ? "✅ CORRECT" : "❌ INCORRECT"}');

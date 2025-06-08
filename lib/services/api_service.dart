@@ -6,7 +6,9 @@ import '../models/api_response.dart';
 import 'package:flutter/foundation.dart'; // Import for debugPrint
 
 class ApiService {
-  static const String baseUrl = 'https://service.bdr.gr/blood-donor-registry-web-public/rest';
+  // Base URL for the legacy API as documented
+  static const String
+      baseUrl = 'https://service.bdr.gr/blood-donor-registry-web-public/rest';
   static const String _tokenKey = 'x_auth_token';
   static const FlutterSecureStorage _storage = FlutterSecureStorage();
 
@@ -205,8 +207,10 @@ class ApiService {
     if (_isMockMode) {
       debugPrint('ApiService: In mock mode, returning MOCK CaptchaData.');
       return Future.delayed(const Duration(milliseconds: 300), () => _mockCaptchaData);
-    }    try {      final response = await http.get(
-        Uri.parse('https://service.blooddonorregistry.gr/v2/captcha'),
+    }
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/captcha'),
         headers: await _getHeaders(requireAuth: false, language: 'en'),
       );
 
@@ -216,7 +220,7 @@ class ApiService {
     }
   }
 
-  // GET /v2/user/{id} - Get user info
+  // GET /blooddonor/{id} - Get user info
   static Future<UserData> getUser(String userId, {String? language, String? ifModifiedSince}) async {
     await _checkMockMode();
     debugPrint("ApiService: getUser called with userId: '$userId'. Current mock mode: $_isMockMode");
@@ -260,7 +264,9 @@ class ApiService {
       debugPrint("ApiService: getUser - Exception caught: $e");
       throw Exception('Failed to get user data: $e');
     }
-  }  // GET /blooddonor/{userId}/donation/history - Get donations for a specific user
+  }
+
+  // GET /blooddonor/{userId}/donation/history - Get donations
   static Future<List<Donation>> getDonations(String userId, {String? language, String? ifModifiedSince}) async {
     await _checkMockMode();
     debugPrint("ApiService: getDonations called with userId: '$userId'. Current mock mode: $_isMockMode");
@@ -270,9 +276,9 @@ class ApiService {
     }
 
     if (userId.isEmpty) {
-      debugPrint("ApiService: getDonations called with EMPTY userId and NOT in mock mode. Throwing error.");
-      throw Exception("User ID cannot be empty when fetching donations.");
-    }// Test network connectivity first
+      throw Exception('User ID is required to fetch donations');
+    }
+    // Test network connectivity first
     debugPrint("ApiService: getDonations - Testing network connectivity...");
     bool isConnected = await testNetworkConnectivity();
     if (!isConnected) {
@@ -282,7 +288,8 @@ class ApiService {
     try {      final headers = await _getHeaders(language: language ?? 'en');
       if (ifModifiedSince != null) {
         headers['If-Modified-Since'] = ifModifiedSince;
-      }      final uri = Uri.parse('$baseUrl/blooddonor/$userId/donation/history');
+      }      final uri =
+          Uri.parse('$baseUrl/blooddonor/$userId/donation/history');
       debugPrint("ApiService: getDonations - About to make HTTP GET request to: $uri");
       debugPrint("ApiService: getDonations - Headers: $headers");
       
@@ -342,7 +349,9 @@ class ApiService {
       debugPrint("ApiService: getDonations - Exception caught: $e");
       throw Exception('Failed to get donations: $e');
     }
-  }  // GET /blooddonor/{userId}/coverages - Get coverages for a specific user
+  }
+
+  // GET /blooddonor/{userId}/coverageDonation/history - Get coverages
   static Future<List<Coverage>> getCoverages(String userId, {String? language, String? ifModifiedSince}) async {
     await _checkMockMode();
     debugPrint("ApiService: getCoverages called with userId: '$userId'. Current mock mode: $_isMockMode");
@@ -352,15 +361,15 @@ class ApiService {
     }
 
     if (userId.isEmpty) {
-      debugPrint("ApiService: getCoverages called with EMPTY userId and NOT in mock mode. Throwing error.");
-      throw Exception("User ID cannot be empty when fetching coverages.");
+      throw Exception('User ID is required to fetch coverages');
     }
 
     try {
       final headers = await _getHeaders(language: language ?? 'en');
       if (ifModifiedSince != null) {
         headers['If-Modified-Since'] = ifModifiedSince;
-      }      final uri = Uri.parse('$baseUrl/blooddonor/$userId/coverages');
+      }      final uri =
+          Uri.parse('$baseUrl/blooddonor/$userId/coverageDonation/history');
       debugPrint("ApiService: getCoverages - About to make HTTP GET request to: $uri");
       debugPrint("ApiService: getCoverages - Headers: $headers");
       
@@ -418,8 +427,10 @@ class ApiService {
       debugPrint('ApiService: MOCK sendIssue called with mock token. Data: ${issue.toJson()}');
       // Simulate a successful API call for contact form in mock mode
       return Future.delayed(const Duration(milliseconds: 300)); 
-    }    try {      final response = await http.post(
-        Uri.parse('https://service.blooddonorregistry.gr/v2/contact'),
+    }
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/contact'),
         headers: await _getHeaders(requireAuth: false, language: 'en'),
         body: json.encode(issue.toJson()),
       );if (response.statusCode >= 200 && response.statusCode < 300) {

@@ -6,20 +6,15 @@ Future<void> main() async {
   
   // Different base URL patterns to test
   final baseUrls = [
-    'https://service.blooddonorregistry.gr',
-    'https://service.blooddonorregistry.gr/v2',
-    'https://service.bdr.gr',
-    'https://service.bdr.gr/v2',
     'https://service.bdr.gr/blood-donor-registry-web-public/rest',
-    'https://service.bdr.gr/blood-donor-registry-web-public/rest/v2',
   ];
   
   // Different endpoint patterns to test
   final endpointPatterns = [
-    '/donations',
-    '/v2/donations',
-    '/blooddonor/donations',
-    '/blooddonor/v2/donations',
+    '/blooddonor/123/donation/history',
+    '/blooddonor/123/coverageDonation/history',
+    '/blooddonor/123',
+    '/captcha',
   ];
   
   final client = HttpClient();
