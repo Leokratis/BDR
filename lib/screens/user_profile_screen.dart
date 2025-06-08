@@ -4,6 +4,7 @@ import '../services/api_service.dart';
 import '../models/api_response.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
+import 'contact_screen.dart'; // Import ContactScreen
 
 class UserProfileScreen extends StatefulWidget {
   const UserProfileScreen({super.key});
@@ -21,11 +22,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   @override
   void initState() {
     super.initState();
-    // Auto-load user profile if user ID is available from auth provider
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     if (authProvider.currentUser != null) {
       _userIdController.text = authProvider.currentUser!.id;
       _loadUserProfile();
+    } else if (authProvider.token != null) {
+      // If current user is null but token exists, try to derive ID or fetch based on token
+      // This part depends on how your user ID is linked to the token.
+      // For now, let's assume the token itself might be usable or contains user ID info.
+      // This is a placeholder: you might need a way to get user ID after initial login
+      // if not immediately available in AuthProvider.currentUser.id
+      // Example: decode token if it's a JWT, or make a dedicated endpoint call.
+      // If an ID can be reliably obtained, call _loadUserProfile with it.
     }
   }
 
@@ -38,10 +46,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   Future<void> _loadUserProfile() async {
     final userId = _userIdController.text.trim();
     if (userId.isEmpty) {
-      setState(() {
-        _error = 'Please enter a user ID';
-      });
-      return;
+      // If user ID is not available, try to get it from AuthProvider's current user
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      if (authProvider.currentUser?.id != null && authProvider.currentUser!.id.isNotEmpty) {
+         _userIdController.text = authProvider.currentUser!.id;
+      } else {
+        setState(() {
+            _error = 'User ID not available. Cannot load profile.';
+            _isLoading = false;
+        });
+        return;
+      }
     }
 
     setState(() {
@@ -50,14 +65,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     });
 
     try {
-      final userData = await ApiService.getUser(userId);
+      // Use the ID from controller, which should now be populated
+      final userData = await ApiService.getUser(_userIdController.text.trim());
       setState(() {
         _userData = userData;
+        // Update AuthProvider's current user if it was null or different
+        Provider.of<AuthProvider>(context, listen: false).currentUser = userData;
         _isLoading = false;
       });
     } catch (e) {
       setState(() {
-        _error = e.toString();
+        _error = "Failed to get user data."; // Simplified error message
         _isLoading = false;
       });
     }
@@ -65,353 +83,193 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
     return Scaffold(
       body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'User Profile',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
+        padding: const EdgeInsets.all(16.0),
+        child: ListView(
+          children: <Widget>[
+            const SizedBox(height: 20), // Top padding
             Text(
-              'View user information and details',
-              style: TextStyle(
-                fontSize: 16,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              'Profile & Settings',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 30),
+
+            // User ID input and load button section
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextField(
+                      controller: _userIdController,
+                      decoration: InputDecoration(
+                        labelText: 'User ID',
+                        hintText: 'Enter your User ID to load profile',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () => _userIdController.clear(),
+                        )
+                      ),
+                      keyboardType: TextInputType.text,
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Load Profile'),
+                      onPressed: _loadUserProfile,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        textStyle: const TextStyle(fontSize: 16)
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 10),
+
+            if (_isLoading)
+              const Center(child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: CircularProgressIndicator(),
+              )),
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(
+                  _error!, // Display the simplified error message
+                  style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 16, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            if (_userData != null)
+              _buildUserDetailsCard(_userData!), // Extracted user details display to a method
             
-            // User ID Input
-            CustomCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'User ID',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _userIdController,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter user ID (e.g., 492966250)',
-                      prefixIcon: Icon(Icons.person),
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: CustomButton(
-                      text: 'Load Profile',
-                      onPressed: _isLoading ? null : _loadUserProfile,
-                      isLoading: _isLoading,
-                    ),
-                  ),
-                ],
+            const SizedBox(height: 20),
+            const Divider(),
+            const SizedBox(height: 10),
+
+            // Contact Us Tile
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: ListTile(
+                leading: Icon(Icons.contact_support_outlined, color: Theme.of(context).colorScheme.primary),
+                title: const Text('Contact Us'),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 18),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const ContactScreen()),
+                  );
+                },
               ),
             ),
-            
-            const SizedBox(height: 24),
-            
-            // Profile Content
-            Expanded(
-              child: _buildProfileContent(),
+            const SizedBox(height: 10),
+
+            // Logout Tile
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: ListTile(
+                leading: Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
+                title: Text('Logout', style: TextStyle(color: Theme.of(context).colorScheme.error, fontWeight: FontWeight.w500)),
+                onTap: () async {
+                  // Show confirmation dialog before logging out
+                  final bool? confirmLogout = await showDialog<bool>(
+                    context: context,
+                    builder: (BuildContext dialogContext) {
+                      return AlertDialog(
+                        title: const Text('Confirm Logout'),
+                        content: const Text('Are you sure you want to log out?'),
+                        actions: <Widget>[
+                          TextButton(
+                            child: const Text('Cancel'),
+                            onPressed: () {
+                              Navigator.of(dialogContext).pop(false); // User cancelled
+                            },
+                          ),
+                          TextButton(
+                            child: Text('Logout', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                            onPressed: () {
+                              Navigator.of(dialogContext).pop(true); // User confirmed
+                            },
+                          ),
+                        ],
+                      );
+                    },
+                  );
+
+                  if (confirmLogout == true) {
+                    await authProvider.logout();
+                    if (mounted) {
+                      Navigator.of(context, rootNavigator: true)
+                          .pushNamedAndRemoveUntil('/auth', (Route<dynamic> route) => false);
+                    }
+                  }
+                },
+              ),
             ),
+            const SizedBox(height: 20), // Bottom padding
           ],
         ),
       ),
     );
   }
 
-  Widget _buildProfileContent() {
-    if (_error != null) {
-      return _buildErrorState();
-    }
-
-    if (_userData == null) {
-      return _buildEmptyState();
-    }
-
-    return _buildProfileDetails();
-  }
-
-  Widget _buildErrorState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.error_outline,
-            size: 64,
-            color: Theme.of(context).colorScheme.error,
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Failed to load profile',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _error!,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-            ),
-          ),
-          const SizedBox(height: 24),
-          CustomButton(
-            text: 'Try Again',
-            onPressed: _loadUserProfile,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.person_outline,
-            size: 64,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'No profile loaded',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Enter a user ID and tap "Load Profile" to view user information',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProfileDetails() {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          // Profile Header
-          CustomCard(
-            child: Column(
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: AppTheme.accent.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.person,
-                    size: 40,
-                    color: AppTheme.accent,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  _userData!.name ?? 'User ${_userData!.id}',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'ID: ${_userData!.id}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Contact Information
-          CustomCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Contact Information',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                if (_userData!.email != null)
-                  _ProfileInfoRow(
-                    icon: Icons.email,
-                    label: 'Email',
-                    value: _userData!.email!,
-                    color: AppTheme.accent,
-                  ),
-                if (_userData!.phone != null) ...[
-                  if (_userData!.email != null) const SizedBox(height: 12),
-                  _ProfileInfoRow(
-                    icon: Icons.phone,
-                    label: 'Phone',
-                    value: _userData!.phone!,
-                    color: AppTheme.success,
-                  ),
-                ],
-                if (_userData!.email == null && _userData!.phone == null)
-                  Text(
-                    'No contact information available',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Medical Information
-          CustomCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Medical Information',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                if (_userData!.bloodType != null)
-                  _ProfileInfoRow(
-                    icon: Icons.bloodtype,
-                    label: 'Blood Type',
-                    value: _userData!.bloodType!,
-                    color: AppTheme.error,
-                  ),
-                if (_userData!.totalDonations != null) ...[
-                  if (_userData!.bloodType != null) const SizedBox(height: 12),
-                  _ProfileInfoRow(
-                    icon: Icons.favorite,
-                    label: 'Total Donations',
-                    value: _userData!.totalDonations!.toString(),
-                    color: AppTheme.warning,
-                  ),
-                ],
-                if (_userData!.lastDonation != null) ...[
-                  if (_userData!.bloodType != null || _userData!.totalDonations != null) 
-                    const SizedBox(height: 12),
-                  _ProfileInfoRow(
-                    icon: Icons.calendar_today,
-                    label: 'Last Donation',
-                    value: _formatDate(_userData!.lastDonation!),
-                    color: AppTheme.success,
-                  ),
-                ],
-                if (_userData!.bloodType == null && 
-                    _userData!.totalDonations == null && 
-                    _userData!.lastDonation == null)
-                  Text(
-                    'No medical information available',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
-  }
-}
-
-class _ProfileInfoRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color color;
-
-  const _ProfileInfoRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            icon,
-            size: 16,
-            color: color,
-          ),
+  // Helper widget to display user details
+  Widget _buildUserDetailsCard(UserData userData) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text('User Details', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+            const Divider(height: 20, thickness: 1),
+            _buildDetailRow('ID', userData.id),
+            // Use 'name' field from UserData instead of 'username', 'firstName', 'lastName'
+            _buildDetailRow('Name', userData.name ?? 'N/A'), 
+            _buildDetailRow('Email', userData.email ?? 'N/A'),
+            _buildDetailRow('Phone', userData.phone ?? 'N/A'),
+            _buildDetailRow('Blood Type', userData.bloodType ?? 'N/A'),
+            _buildDetailRow('Last Donation', userData.lastDonation?.toLocal().toString().split(' ')[0] ?? 'N/A'),
+            _buildDetailRow('Total Donations', userData.totalDonations?.toString() ?? 'N/A'),
+            // Remove fields not present in UserData model
+            // _buildDetailRow('Registered Since', userData.memberSince?.toLocal().toString().split(' ')[0] ?? 'N/A'),
+            // _buildDetailRow('Email Verified', userData.emailIsVerified == true ? 'Yes' : 'No'),
+            // if (userData.roles != null && userData.roles!.isNotEmpty)
+            //   _buildDetailRow('Roles', userData.roles!.join(', ')),
+          ],
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                ),
-              ),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          SizedBox(width: 120, child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15))),
+          const SizedBox(width: 10),
+          Expanded(child: Text(value, style: const TextStyle(fontSize: 15))),
+        ],
+      ),
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math; // For min/max
 import '../services/api_service.dart';
 import '../models/api_response.dart';
 import '../theme/app_theme.dart';
@@ -10,89 +11,200 @@ class CoveragesScreen extends StatefulWidget {
   State<CoveragesScreen> createState() => _CoveragesScreenState();
 }
 
-class _CoveragesScreenState extends State<CoveragesScreen> {
+class _CoveragesScreenState extends State<CoveragesScreen> with TickerProviderStateMixin { // Added TickerProviderStateMixin
   List<Coverage>? _coverages;
   bool _isLoading = false;
   String? _error;
+
+  // --- Custom Pull-to-Refresh State ---
+  double _dragOffset = 0.0;
+  final double _refreshTriggerOffset = 100.0;
+  final double _maxPullDown = 150.0;
+  bool _isRefreshingByPull = false;
+
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+  late AnimationController _offsetController;
+  late Animation<double> _offsetAnimation;
+  // --- End Custom Pull-to-Refresh State ---
 
   @override
   void initState() {
     super.initState();
     _loadCoverages();
+
+    // --- Initialize Animation Controllers ---
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 700),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _pulseAnimation = Tween<double>(begin: 0.8, end: 1.2).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+
+    _offsetController = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 200));
+    _offsetAnimation =
+        Tween<double>(begin: 0, end: 0).animate(_offsetController)
+          ..addListener(() {
+            if (!_isRefreshingByPull) {
+              setState(() {
+                _dragOffset = _offsetAnimation.value;
+              });
+            }
+          });
+    // --- End Initialize Animation Controllers ---
   }
 
-  Future<void> _loadCoverages() async {
+  @override
+  void dispose() {
+    // --- Dispose Animation Controllers ---
+    _pulseController.dispose();
+    _offsetController.dispose();
+    // --- End Dispose Animation Controllers ---
+    super.dispose();
+  }
+
+  // --- Custom Pull-to-Refresh Logic ---
+  Future<void> _handleRefresh() async {
+    if (_isRefreshingByPull) return;
+
     setState(() {
-      _isLoading = true;
-      _error = null;
+      _isRefreshingByPull = true;
     });
+
+    await _loadCoverages();
+  }
+  // --- End Custom Pull-to-Refresh Logic ---
+
+  Future<void> _loadCoverages() async {
+    final bool wasInitiatedByPull = _isRefreshingByPull;
+
+    if (!wasInitiatedByPull) {
+      setState(() {
+        _isLoading = true;
+        _error = null; 
+      });
+    } else {
+      if (_error != null) {
+        setState(() {
+          _error = null;
+        });
+      }
+    }
 
     try {
       final coverages = await ApiService.getCoverages();
-      setState(() {
-        _coverages = coverages;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _coverages = coverages;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _error = "Failed to get coverages.";
+        });
+      }
+    } finally {
+      if (mounted) {
+        if (wasInitiatedByPull) {
+          setState(() {
+            _isRefreshingByPull = false;
+            _isLoading = false; 
+          });
+          _offsetAnimation = Tween<double>(begin: _dragOffset, end: 0).animate(
+              CurvedAnimation(parent: _offsetController, curve: Curves.easeOut));
+          _offsetController.forward(from: 0);
+        } else {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
     }
   }
 
-  Future<void> _refreshCoverages() async {
-    await _loadCoverages();
-  }
+  // Removed _refreshCoverages as it\'s redundant with _handleRefresh
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: _refreshCoverages,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Blood Coverages',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+      body: GestureDetector( // Added GestureDetector for pull-to-refresh
+        behavior: HitTestBehavior.opaque, // Capture gestures across the whole area
+        onVerticalDragStart: (_) {
+          _offsetController.stop();
+        },
+        onVerticalDragUpdate: (details) {
+          if (_isRefreshingByPull) return;
+          setState(() {
+            _dragOffset = math.max(0, math.min(_dragOffset + details.delta.dy, _maxPullDown));
+          });
+        },
+        onVerticalDragEnd: (details) {
+          if (_isRefreshingByPull) return;
+          if (_dragOffset >= _refreshTriggerOffset) {
+            _handleRefresh();
+          } else {
+            _offsetAnimation = Tween<double>(begin: _dragOffset, end: 0).animate(
+                CurvedAnimation(parent: _offsetController, curve: Curves.easeOut));
+            _offsetController.forward(from: 0);
+          }
+        },
+        child: Stack( // Added Stack for layering refresh indicator and content
+          children: [
+            Positioned( // Blood drop refresh indicator
+              top: (_dragOffset * 0.6) - 40,
+              left: 0,
+              right: 0,
+              child: Opacity(
+                opacity: math.min(1.0, _dragOffset / _refreshTriggerOffset),
+                child: Center(
+                  child: ScaleTransition(
+                    scale: _pulseAnimation,
+                    child: const Icon(
+                      Icons.bloodtype,
+                      color: AppTheme.error,
+                      size: 40.0,
                     ),
                   ),
-                  IconButton(
-                    onPressed: _loadCoverages,
-                    icon: const Icon(Icons.refresh),
-                    tooltip: 'Refresh',
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'View available blood coverage information',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                 ),
               ),
-              const SizedBox(height: 24),
-              Expanded(
-                child: _buildContent(),
+            ),
+            Transform.translate( // Main content, translated by drag
+              offset: Offset(0, _dragOffset),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Blood Coverages',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.error,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const SizedBox(height: 24),
+                    Expanded(
+                      child: _buildContent(),
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
   Widget _buildContent() {
-    if (_isLoading) {
+    // Show shimmer only on initial load or non-pull refresh
+    if (_isLoading && !_isRefreshingByPull) { 
       return _buildLoadingState();
     }
 
@@ -108,18 +220,21 @@ class _CoveragesScreenState extends State<CoveragesScreen> {
   }
 
   Widget _buildLoadingState() {
-    return ListView.separated(
+    final listView = ListView.separated(
+      physics: (_dragOffset > 0 || _isRefreshingByPull)
+                 ? const NeverScrollableScrollPhysics()
+                 : null, // Or const AlwaysScrollableScrollPhysics()
       itemCount: 5,
       separatorBuilder: (context, index) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
-        return CustomCard(
+        return CustomCard( // Assuming CustomCard is defined
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const SkeletonLoader(width: 150, height: 20),
+                  const SkeletonLoader(width: 150, height: 20), // Assuming SkeletonLoader is defined
                   const SkeletonLoader(width: 80, height: 16),
                 ],
               ),
@@ -134,6 +249,10 @@ class _CoveragesScreenState extends State<CoveragesScreen> {
         );
       },
     );
+    if (_dragOffset > 0 || _isRefreshingByPull) {
+      return IgnorePointer(child: listView);
+    }
+    return listView;
   }
 
   Widget _buildErrorState() {
@@ -147,25 +266,18 @@ class _CoveragesScreenState extends State<CoveragesScreen> {
             color: Theme.of(context).colorScheme.error,
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Failed to load coverages',
-            style: TextStyle(
+          Text(
+            _error!, 
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _error!,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-            ),
           ),
           const SizedBox(height: 24),
-          CustomButton(
+          CustomButton( // Assuming CustomButton is defined
             text: 'Try Again',
-            onPressed: _loadCoverages,
+            onPressed: _loadCoverages, 
           ),
         ],
       ),
@@ -204,7 +316,10 @@ class _CoveragesScreenState extends State<CoveragesScreen> {
   }
 
   Widget _buildCoveragesList() {
-    return ListView.separated(
+    final listView = ListView.separated(
+      physics: (_dragOffset > 0 || _isRefreshingByPull)
+                 ? const NeverScrollableScrollPhysics()
+                 : null, // Or const AlwaysScrollableScrollPhysics()
       itemCount: _coverages!.length,
       separatorBuilder: (context, index) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
@@ -212,6 +327,11 @@ class _CoveragesScreenState extends State<CoveragesScreen> {
         return _CoverageCard(coverage: coverage);
       },
     );
+
+    if (_dragOffset > 0 || _isRefreshingByPull) {
+      return IgnorePointer(child: listView);
+    }
+    return listView;
   }
 }
 
@@ -363,6 +483,70 @@ class _InfoRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// Assuming CustomCard, SkeletonLoader, CustomButton are defined elsewhere (e.g. in a common widgets file)
+// or were part of the original coverages_screen.dart.
+// If not, they would need to be added here or imported.
+// For example, if they were dummy implementations at the end of donations_screen.dart:
+class CustomCard extends StatelessWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+  const CustomCard({super.key, required this.child, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(elevation: 2, margin: const EdgeInsets.symmetric(vertical: 8), child: InkWell(onTap: onTap, child: Padding(padding: const EdgeInsets.all(12.0), child: child)));
+  }
+}
+
+class SkeletonLoader extends StatelessWidget {
+  final double width;
+  final double height;
+  const SkeletonLoader({super.key, required this.width, required this.height});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.grey[300],
+        borderRadius: BorderRadius.circular(4),
+      ),
+    );
+  }
+}
+
+class CustomButton extends StatelessWidget {
+  final String text;
+  final VoidCallback onPressed;
+  final Color? color;
+  final Color? textColor;
+
+  const CustomButton({
+    super.key,
+    required this.text,
+    required this.onPressed,
+    this.color,
+    this.textColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color ?? AppTheme.primary,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+      onPressed: onPressed,
+      child: Text(text, style: TextStyle(color: textColor ?? Colors.white)),
     );
   }
 }

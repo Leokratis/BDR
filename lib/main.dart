@@ -6,6 +6,8 @@ import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
 
 void main() {
+  // Ensure Flutter bindings are initialized for async operations before runApp
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
@@ -14,24 +16,47 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
-      ],
-      child: MaterialApp(
-        title: 'Blood Donation Registry',
-        theme: AppTheme.lightTheme,
-        home: const AuthWrapper(),
-        routes: {
-          '/auth': (context) => const AuthScreen(),
-          '/home': (context) => const HomeScreen(),
+    return ChangeNotifierProvider(
+      create: (_) => AuthProvider()..checkAuthStatus(), // Initialize and check auth status
+      child: Consumer<AuthProvider>( // Use Consumer here to rebuild MaterialApp if needed
+        builder: (context, authProvider, _) {
+          return MaterialApp(
+            title: 'Blood Donation Registry',
+            theme: AppTheme.lightTheme,
+            // Use a nested navigator for home screen to manage its own back stack
+            home: authProvider.isLoading
+                ? const Scaffold( // Global loading screen
+                    body: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text('Initializing...'),
+                        ],
+                      ),
+                    ),
+                  )
+                : authProvider.isAuthenticated
+                    ? const HomeScreen() // Or a Navigator wrapping HomeScreen if it has sub-routes
+                    : const AuthScreen(),
+            routes: {
+              // Define routes for navigation. AuthScreen and HomeScreen are handled by 'home' logic.
+              // Add other routes here if necessary.
+              // Example: '/profile': (context) => const ProfileScreen(),
+            },
+            debugShowCheckedModeBanner: false,
+          );
         },
-        debugShowCheckedModeBanner: false,
       ),
     );
   }
 }
 
+// AuthWrapper is no longer strictly necessary with the new MyApp structure,
+// but if you prefer to keep it, ensure it correctly uses the AuthProvider.
+// For this refactor, I've integrated its logic into MyApp.
+/*
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
 
@@ -43,10 +68,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   void initState() {
     super.initState();
-    // Check authentication status on app start
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<AuthProvider>(context, listen: false).checkAuthStatus();
-    });
+    // AuthProvider is now initialized and checkAuthStatus called in MyApp's ChangeNotifierProvider
+    // If you keep AuthWrapper, you might not need to call checkAuthStatus here again
+    // or ensure it doesn't conflict.
   }
 
   @override
@@ -77,3 +101,4 @@ class _AuthWrapperState extends State<AuthWrapper> {
     );
   }
 }
+*/

@@ -23,12 +23,10 @@ class AppTheme {
         primary: primary,
         secondary: secondary,
         surface: surface,
-        background: background,
         error: error,
         onPrimary: onPrimary,
         onSecondary: onPrimary,
         onSurface: onSurface,
-        onBackground: onSurface,
         onError: onPrimary,
       ),
       scaffoldBackgroundColor: background,
@@ -39,11 +37,10 @@ class AppTheme {
         titleTextStyle: TextStyle(
           color: onSurface,
           fontSize: 20,
-          fontWeight: FontWeight.w600,
-        ),
+          fontWeight: FontWeight.w600,        ),
         iconTheme: IconThemeData(color: onSurface),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
