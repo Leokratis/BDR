@@ -6,7 +6,8 @@ import '../models/api_response.dart';
 import 'package:flutter/foundation.dart'; // Import for debugPrint
 
 class ApiService {
-  static const String baseUrl = 'https://service.bdr.gr/blood-donor-registry-web-public/rest';
+  // Updated base URL based on the official API documentation
+  static const String baseUrl = 'https://service.blooddonorregistry.gr/v2';
   static const String _tokenKey = 'x_auth_token';
   static const FlutterSecureStorage _storage = FlutterSecureStorage();
 
@@ -247,7 +248,7 @@ class ApiService {
       final headers = await _getHeaders(language: language ?? 'en');
       if (ifModifiedSince != null) {
         headers['If-Modified-Since'] = ifModifiedSince;
-      }      final uri = Uri.parse('$baseUrl/blooddonor/$userId');
+      }      final uri = Uri.parse('$baseUrl/user/$userId');
       debugPrint("ApiService: getUser - About to make HTTP GET request to: $uri");
       debugPrint("ApiService: getUser - Headers: $headers");
       
@@ -260,7 +261,9 @@ class ApiService {
       debugPrint("ApiService: getUser - Exception caught: $e");
       throw Exception('Failed to get user data: $e');
     }
-  }  // GET /blooddonor/{userId}/donation/history - Get donations for a specific user
+  }
+
+  // GET /donations - Get donations for the authenticated user
   static Future<List<Donation>> getDonations(String userId, {String? language, String? ifModifiedSince}) async {
     await _checkMockMode();
     debugPrint("ApiService: getDonations called with userId: '$userId'. Current mock mode: $_isMockMode");
@@ -269,10 +272,11 @@ class ApiService {
       return Future.delayed(const Duration(milliseconds: 300), () => _mockDonations);
     }
 
+    // New API no longer requires the userId in the path. Keep parameter for backward compatibility.
     if (userId.isEmpty) {
-      debugPrint("ApiService: getDonations called with EMPTY userId and NOT in mock mode. Throwing error.");
-      throw Exception("User ID cannot be empty when fetching donations.");
-    }// Test network connectivity first
+      debugPrint("ApiService: getDonations called without userId - continuing as it's optional in the new API");
+    }
+    // Test network connectivity first
     debugPrint("ApiService: getDonations - Testing network connectivity...");
     bool isConnected = await testNetworkConnectivity();
     if (!isConnected) {
@@ -282,7 +286,7 @@ class ApiService {
     try {      final headers = await _getHeaders(language: language ?? 'en');
       if (ifModifiedSince != null) {
         headers['If-Modified-Since'] = ifModifiedSince;
-      }      final uri = Uri.parse('$baseUrl/blooddonor/$userId/donation/history');
+      }      final uri = Uri.parse('$baseUrl/donations');
       debugPrint("ApiService: getDonations - About to make HTTP GET request to: $uri");
       debugPrint("ApiService: getDonations - Headers: $headers");
       
@@ -342,7 +346,9 @@ class ApiService {
       debugPrint("ApiService: getDonations - Exception caught: $e");
       throw Exception('Failed to get donations: $e');
     }
-  }  // GET /blooddonor/{userId}/coverages - Get coverages for a specific user
+  }
+
+  // GET /coverages - Get coverages for the authenticated user
   static Future<List<Coverage>> getCoverages(String userId, {String? language, String? ifModifiedSince}) async {
     await _checkMockMode();
     debugPrint("ApiService: getCoverages called with userId: '$userId'. Current mock mode: $_isMockMode");
@@ -351,16 +357,16 @@ class ApiService {
       return Future.delayed(const Duration(milliseconds: 300), () => _mockCoverages);
     }
 
+    // New API does not require the userId in the path
     if (userId.isEmpty) {
-      debugPrint("ApiService: getCoverages called with EMPTY userId and NOT in mock mode. Throwing error.");
-      throw Exception("User ID cannot be empty when fetching coverages.");
+      debugPrint("ApiService: getCoverages called without userId - continuing as it's optional in the new API");
     }
 
     try {
       final headers = await _getHeaders(language: language ?? 'en');
       if (ifModifiedSince != null) {
         headers['If-Modified-Since'] = ifModifiedSince;
-      }      final uri = Uri.parse('$baseUrl/blooddonor/$userId/coverages');
+      }      final uri = Uri.parse('$baseUrl/coverages');
       debugPrint("ApiService: getCoverages - About to make HTTP GET request to: $uri");
       debugPrint("ApiService: getCoverages - Headers: $headers");
       
