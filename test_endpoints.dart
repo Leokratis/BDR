@@ -4,8 +4,8 @@ void main() async {
   // Test the correct API endpoints according to documentation
   final testEndpoints = [
     'https://service.blooddonorregistry.gr/v2/captcha',
-    'https://service.blooddonorregistry.gr/v2/v2/donations',
-    'https://service.blooddonorregistry.gr/v2/v2/coverages',
+    'https://service.blooddonorregistry.gr/v2/donations',
+    'https://service.blooddonorregistry.gr/v2/coverages',
     'https://service.blooddonorregistry.gr/v2/contact',
   ];
 
