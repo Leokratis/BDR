@@ -15,6 +15,8 @@ public final class ApiClient {
     private static final String BASE = "https://service.blooddonorregistry.gr";
     private static final String PREFS = "bdr_prefs";
     private static final String TOKEN_KEY = "token";
+    private static final int CONNECT_TIMEOUT_MS = 10_000;
+    private static final int READ_TIMEOUT_MS = 15_000;
 
     private ApiClient() {
     }
@@ -29,6 +31,8 @@ public final class ApiClient {
         try {
             URL url = new URL(BASE + path);
             connection = (HttpURLConnection) url.openConnection();
+            connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
+            connection.setReadTimeout(READ_TIMEOUT_MS);
             connection.setRequestMethod(method);
             connection.setRequestProperty("Accept", "application/json");
             if (token != null) {
