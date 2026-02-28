@@ -46,7 +46,13 @@ public final class ApiClient {
                     ? connection.getErrorStream()
                     : connection.getInputStream();
             if (responseStream == null) {
-                return "";
+                int statusCode = connection.getResponseCode();
+                String statusMessage = connection.getResponseMessage();
+                if (statusMessage == null || statusMessage.isEmpty()) {
+                    return "HTTP " + statusCode;
+                } else {
+                    return "HTTP " + statusCode + " " + statusMessage;
+                }
             }
 
             try (BufferedReader br = new BufferedReader(new InputStreamReader(responseStream, StandardCharsets.UTF_8))) {
