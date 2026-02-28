@@ -4,15 +4,20 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 import java.io.BufferedReader;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-public class ApiClient {
+public final class ApiClient {
     private static final String BASE = "https://service.blooddonorregistry.gr";
     private static final String PREFS = "bdr_prefs";
     private static final String TOKEN_KEY = "token";
+
+    private ApiClient() {
+    }
 
     public static String getToken(Context ctx) {
         SharedPreferences prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
@@ -20,30 +25,44 @@ public class ApiClient {
     }
 
     private static String request(String method, String path, String token, String body) {
+        HttpURLConnection connection = null;
         try {
             URL url = new URL(BASE + path);
-            HttpURLConnection con = (HttpURLConnection) url.openConnection();
-            con.setRequestMethod(method);
-            con.setRequestProperty("Accept", "application/json");
+            connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod(method);
+            connection.setRequestProperty("Accept", "application/json");
             if (token != null) {
-                con.setRequestProperty("X-Auth-Token", token);
+                connection.setRequestProperty("X-Auth-Token", token);
             }
             if (body != null) {
-                con.setDoOutput(true);
-                OutputStream os = con.getOutputStream();
-                os.write(body.getBytes());
-                os.close();
+                connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+                connection.setDoOutput(true);
+                try (OutputStream os = connection.getOutputStream()) {
+                    os.write(body.getBytes(StandardCharsets.UTF_8));
+                }
             }
-            BufferedReader br = new BufferedReader(new InputStreamReader(con.getInputStream()));
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = br.readLine()) != null) {
-                sb.append(line);
+
+            InputStream responseStream = connection.getResponseCode() >= HttpURLConnection.HTTP_BAD_REQUEST
+                    ? connection.getErrorStream()
+                    : connection.getInputStream();
+            if (responseStream == null) {
+                return "";
             }
-            br.close();
-            return sb.toString();
+
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(responseStream, StandardCharsets.UTF_8))) {
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = br.readLine()) != null) {
+                    sb.append(line);
+                }
+                return sb.toString();
+            }
         } catch (Exception e) {
             return e.toString();
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
         }
     }
 
